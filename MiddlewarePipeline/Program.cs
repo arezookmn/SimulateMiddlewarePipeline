@@ -1,20 +1,28 @@
-var builder = WebApplication.CreateBuilder(args);
+using MicroWebFramework.Pipeline;
+using MicroWebFramework.Pipes;
+using MiddlewarePipeline;
+using System.Net;
 
-// Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+var pipeline = new PipelineBuilder()
+    .UsePipe(typeof(ExceptionHandlingPipe))
+    .UsePipe(typeof(AuthenticationPipe))
+    .UsePipe(typeof(EndPointPipe))
+    .Build();
 
-var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+using (var listener = new HttpListener())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    listener.Prefixes.Add("http://localhost:8080/");
+    listener.Start();
+
+    Console.WriteLine("Listening for requests...");
+
+
+    while (true)
+    {
+        HttpListenerContext context = listener.GetContext();
+
+        pipeline.Invoke(new  HttpContext() { Request = context.Request, Response = context.Response });
+    }
 }
-
-app.UseHttpsRedirection();
-
-app.Run();
 
